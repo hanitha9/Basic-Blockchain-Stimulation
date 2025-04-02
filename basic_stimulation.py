@@ -1,111 +1,130 @@
-import hashlib
-import time
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blockchain Explorer</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Blockchain Explorer</h1>
+        <button id="addBlock">Add Block</button>
+        <div class="blockchain" id="blockchain"></div>
+    </div>
 
-class Block:
-    def __init__(self, index, transactions, previous_hash, nonce=0):
-        self.index = index
-        self.timestamp = time.time()  # Current time in seconds
-        self.transactions = transactions  # List of transactions
-        self.previous_hash = previous_hash  # Hash of the previous block
-        self.nonce = nonce  # For Proof-of-Work
-        self.hash = self.calculate_hash()  # Current block's hash
+    <script>
+        class Block {
+            constructor(index, transactions, previousHash = "0") {
+                this.index = index;
+                this.timestamp = new Date().toISOString();
+                this.transactions = transactions;
+                this.previousHash = previousHash;
+                this.nonce = 0;
+                this.hash = this.calculateHash();
+            }
 
-    def calculate_hash(self):
-        # Combine all block data into a single string and hash it
-        block_string = f"{self.index}{self.timestamp}{self.transactions}{self.previous_hash}{self.nonce}"
-        return hashlib.sha256(block_string.encode()).hexdigest()
+            calculateHash() {
+                return btoa(this.index + this.timestamp + JSON.stringify(this.transactions) + this.previousHash + this.nonce);
+            }
+        }
 
-    def __str__(self):
-        return (f"Block #{self.index}\n"
-                f"Timestamp: {self.timestamp}\n"
-                f"Transactions: {self.transactions}\n"
-                f"Previous Hash: {self.previous_hash}\n"
-                f"Hash: {self.hash}\n")
+        class Blockchain {
+            constructor() {
+                this.chain = [this.createGenesisBlock()];
+            }
 
-class Blockchain:
-    def __init__(self):
-        # Genesis block (first block in the chain)
-        self.chain = [self.create_genesis_block()]
-        self.difficulty = 4  # For Proof-of-Work (number of leading zeros)
+            createGenesisBlock() {
+                return new Block(0, ["Genesis Block"], "0");
+            }
 
-    def create_genesis_block(self):
-        # First block with dummy data
-        return Block(0, ["Genesis Block"], "0")
+            getLatestBlock() {
+                return this.chain[this.chain.length - 1];
+            }
 
-    def get_latest_block(self):
-        return self.chain[-1]
+            addBlock(transactions) {
+                const previousBlock = this.getLatestBlock();
+                const newBlock = new Block(previousBlock.index + 1, transactions, previousBlock.hash);
+                this.chain.push(newBlock);
+                this.displayBlockchain();
+            }
 
-    def add_block(self, transactions):
-        # Create a new block linked to the previous one
-        previous_block = self.get_latest_block()
-        new_block = Block(previous_block.index + 1, transactions, previous_block.hash)
-        
-        # Mine the block with Proof-of-Work
-        new_block.hash = self.mine_block(new_block)
-        self.chain.append(new_block)
-        print(f"Block #{new_block.index} added to the chain!")
+            displayBlockchain() {
+                const blockchainDiv = document.getElementById("blockchain");
+                blockchainDiv.innerHTML = "";
+                this.chain.forEach(block => {
+                    const blockDiv = document.createElement("div");
+                    blockDiv.classList.add("block");
+                    blockDiv.innerHTML = `
+                        <h3>Block #${block.index}</h3>
+                        <p><strong>Timestamp:</strong> ${block.timestamp}</p>
+                        <p><strong>Transactions:</strong> ${block.transactions.join(", ")}</p>
+                        <p><strong>Previous Hash:</strong> ${block.previousHash}</p>
+                        <p><strong>Hash:</strong> ${block.hash}</p>
+                    `;
+                    blockchainDiv.appendChild(blockDiv);
+                });
+            }
+        }
 
-    def mine_block(self, block):
-        # Proof-of-Work: Find a hash with 'difficulty' leading zeros
-        target = "0" * self.difficulty
-        while block.hash[:self.difficulty] != target:
-            block.nonce += 1
-            block.hash = block.calculate_hash()
-        print(f"Block mined! Nonce: {block.nonce}")
-        return block.hash
+        const myBlockchain = new Blockchain();
+        document.getElementById("addBlock").addEventListener("click", () => {
+            const transactions = prompt("Enter transactions (comma-separated):").split(",").map(t => t.trim());
+            myBlockchain.addBlock(transactions);
+        });
+        myBlockchain.displayBlockchain();
+    </script>
 
-    def is_chain_valid(self):
-        # Validate the entire chain
-        for i in range(1, len(self.chain)):
-            current = self.chain[i]
-            previous = self.chain[i - 1]
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f4f4;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+        }
 
-            # Check if current block's hash is valid
-            if current.hash != current.calculate_hash():
-                print(f"Invalid hash at Block #{current.index}")
-                return False
+        .container {
+            max-width: 800px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
 
-            # Check if previous hash links correctly
-            if current.previous_hash != previous.hash:
-                print(f"Invalid previous hash link at Block #{current.index}")
-                return False
+        h1 {
+            color: #333;
+        }
 
-        return True
+        #addBlock {
+            background: #007BFF;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
 
-    def print_chain(self):
-        # Print all blocks in the chain
-        print("\nCurrent Blockchain State:")
-        for block in self.chain:
-            print(block)
-            print("-" * 50)
+        #addBlock:hover {
+            background: #0056b3;
+        }
 
-def main():
-    # Create a blockchain instance
-    my_blockchain = Blockchain()
-    print("Genesis block created!\n")
+        .blockchain {
+            text-align: left;
+            margin-top: 20px;
+        }
 
-    # Dynamically add blocks with user-input transactions
-    for i in range(1, 3):  # Add 2 blocks as an example
-        print(f"\nPreparing Block #{i}")
-        transactions = input("Enter transactions (comma-separated, e.g., 'Alice sends 10 BTC to Bob'): ").split(",")
-        my_blockchain.add_block([t.strip() for t in transactions])  # Strip whitespace from inputs
-
-    # Print the blockchain
-    my_blockchain.print_chain()
-
-    # Validate the chain
-    print("\nIs chain valid?", my_blockchain.is_chain_valid())
-
-    # Tamper with the chain (modify Block 1)
-    print("\nTampering with Block 1...")
-    my_blockchain.chain[1].transactions = ["Alice sends 1000 BTC to Hacker"]  # Tamper with data
-    my_blockchain.chain[1].hash = my_blockchain.chain[1].calculate_hash()  # Recalculate hash
-
-    # Print tampered chain
-    my_blockchain.print_chain()
-
-    # Validate again
-    print("\nIs chain valid after tampering?", my_blockchain.is_chain_valid())
-
-if __name__ == "__main__":
-    main()
+        .block {
+            background: #fff;
+            padding: 15px;
+            margin: 10px 0;
+            border-left: 5px solid #007BFF;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+            border-radius: 5px;
+        }
+    </style>
+</body>
+</html>
